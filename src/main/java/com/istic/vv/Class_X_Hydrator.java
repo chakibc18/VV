@@ -268,7 +268,14 @@ static void hydrate_x (NODE entry, NODE root) {
 				for (CtExpression arrg: i_args) {
 					NODE x =X_.create_fast(arrg,  n);
 					n.children.add(x);
-				}		  }
+				}/*
+
+				Appel pour reperer les null pointer potentiels
+			   if(!IfNull.getValue(nX, root)) {
+				   System.out.println("Invocation "+ ie.getSimpleName() +" becouse the invocker " + n.getNameCaller()  + " is null");
+			   };
+			   */
+	   }
 		   if(nX instanceof X_CtJavaDocImpl) {
 		  X_CtJavaDocImpl n=(X_CtJavaDocImpl) nX;
 		  }

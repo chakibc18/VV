@@ -16,4 +16,13 @@ this.parent=parent;
 this.node_name=cls;
 super.i_element=e;
 }
+  public String getNameCaller(){
+
+   String s = i_element.toString();
+   for (int i = 0; i<s.length();i++) {
+    if (s.charAt(i) == '.') s = s.substring(0,i);
+   }
+   return s;
+
+  }
 }

@@ -53,7 +53,7 @@ public class  PackageAnalysis{
 	
 	public static void main(String[] args) {
 		PackageAnalysis a = new PackageAnalysis(
-				"/home/kristof/NPE/");
+				"/home/chak/Documents/VV/NPE/");
 
 	}
 	
