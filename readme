@@ -1,140 +1,26 @@
-CONSTRUCTION D’UN GRAPHE DE FLOT DE CONTRÔLE POUR CALCUL HCC  / DÉTECTION NPE :
- DÉVELOPPEMENT AGILE
-
-	
-	
-INTRODUCTION : CREATION DE L'AST :class_X_Hydrator.java :
-
-static void hydrate_x (NODE entry, NODE root) {
-	entry.node_string=entry.i_element.toString();
-	entry.node_root=(X_CtPackageImpl) root;
-	hydrate_switch(entry,root); --> appel au filtre statique de construction des enfants du NODE x
-	   for (NODE x : entry.children)
-		   Class_X_Hydrator.hydrate_x(x, root); --> appel (récursif) au filtre de construction "hydrate_x" pour chacuns des nouveaux enfants de x
-
-}
-static void hydrate_switch(NODE nX, NODE root) {
-	   if(nX instanceof X_CtPackageImpl) {
-		  X_CtPackageImpl n=(X_CtPackageImpl) nX;
-		  Set<CtPackage> pcks= n.i_element.getPackages();
-		  for (CtPackage pck : pcks) {
-			  NODE x = X_.create(pck, null, null,null, null, n, n); --> appel au filtre statique de construction X_.java (wrapping)
-			  n.children.add(x);
-		  }
-[...]
-
-0-) 
- PHASE DE DESIGN : CREATION DES NOEUDS : toutes les classes de wrapping X_Ct-Impl héritent de NODE.java; les méthodes de ces classes sont principalement destinées au calcul du  flot de contrôle du programme. 
-
-PHASE DE DESIGN : ENTRÉE STATIC MAIN DE PackageAnalysis.java : entrée normale du programme. Elle utilise le processeur : 
-	"class _PackageProcessor extends AbstractProcessor<CtPackage> " qui est uniquement utilisé pour détecter le package racine :
- 	CtPackage rootpck= packages.get(packages.size()-1);
- 	xpackage = (X_CtPackageImpl) X_.create(rootpck, null,null,null,null,null,null); --> et on wrapp le rootpck.
-
-Ensuite, on appel le filtre de construction pour le package racine. 
-	Class_X_Hydrator.hydrate_x(xpackage, xpackage);
-Enfin, on cherche les méthodes main du package avec une méthode statique, 
-			M_Linearizer.scan_for_main (xpackage, M_Linearizer.meth_main_list);
-	for (X_CtMethodImpl m : M_Linearizer.meth_main_list) {
-		new M_Linearizer(m); --> et on lance M_Linearizer pour chaque entrée main; 
-	}
-M_Linearizer lance build_control_flow() qui lance la methode  "expand_x" récursive (le "_x" dans le nom).
-Comme paramètre on trouve le meta noeud de base "this.main_Node". La suite du "design" dans la section 4-).
-
-PHASE DE DESIGN : ENTRÉE STATIC MAIN DE ClassBuilder.java : 
-Nous ne savons toujours pas si la construction automatique par ClassBuilder.java des classes de wrapping X_Ct-Impl, du filtre de construction X_  et du filtre d’hydratation class_X_Hydrator (le parcours récursif de l’AST) sera valable.  
-
-
- PHASE DE DESIGN : CREATION DES META NOEUDS : la classe MetaNode.java possède trois listes :  
-	ArrayList<NODE> linNodes ; --> les NODE considérés linéaires (pas de branchement ou de changement de scope des variables)
-	ArrayList<NODE> WQNodes  ; --> les NODE en attente de traitement (fonction expand() )
-	ArrayList<MetaNode> nxtMetaNodes  ; --> les MetaNodes qui suivent dans le graphe du flot de contrôle du programme
-
-1-)PHASE 1
-
-Le package analysé est imprimé de la manière suivante :
-NPE->2 classes and 1 interfaces 1 sub packages
-NPE.NPEPACK->1 classes and 0 interfaces 1 sub packages
-NPE.NPEPACK.NPEPACK2->1 classes and 0 interfaces 0 sub packages
-Toutes  les classes analysées le sont de la manière suivante (on a les constructeurs, les paramètres et les méthodes) après le sign @@: 
-public static void main( String[] args ){@@ CtMethodImpl
-		 Tri2 tri=new Tri2( "");@@ CtLocalVariableImpl CtConstructorCallImpl
-		 tri.name="kristof";@@ CtAssignmentImpl CtFieldWriteImpl-tri.name CtLiteralImpl-"kristof"
-			int j=2+1;@@ CtLocalVariableImpl CtBinaryOperatorImpl CtLiteralImpl-2 CtLiteralImpl-1
-			 int  i = tri.calltri(j);@@ CtLocalVariableImpl CtInvocationImpl CtVariableReadImpl-j
-			if (j==2)@@ CtIfImpl CtBinaryOperatorImpl CtVariableReadImpl-j CtLiteralImpl-2
-
-2-)PHASE 2 : 
-
-on lance la construction du graphe de flot de contrôle du programme. On prendra pour la HCC, le maximum des CC. 
-
-
-3-)PHASE DE CONSTRUCTION M_Linearizer.java:  
-	 Nous avons pour chaque meta-nœud une liste WaitingQueue WQ de nœuds « NODE.java », la super classe de chaque « X_Ct-Impl.java ». Une liste d’instructions « NODE.java » considérées comme linéaires et une liste de meta-noeuds sortants.
-		  while (MetaNode.compute_changed( root) >0) {
-			counter ++;
-			System.out.println(counter +"eme pass ----------------------\n");
-		  MetaNode.reset_changed_x(root);
-		  expand_x (root,root);
-On lance une construction de type "iterative", certes inefficace en temps, à des fins de déboggage : à chaque changement on recommence une nouvelle "passe" à partir de la racine.
-	public void expand_x (MetaNode root, MetaNode  entry ) {
-expand_WQ(entry); --> La fonction exapnd_x récursive (le "_x" dans le nom) de M_Linearizer.java, commence par vider les noeuds, en attente, de la liste WQNodes
-	  for (MetaNode n : entry.NQMetaNodes) { --> puis lance une récursion sur les meta noeuds de la liste NQMetaNodes
-			expand_x (root,n);
-			
-		}
-
-3-)PHASE DE CONSTRUCTION: EXEMPLE : X_CtIfImpl.java:  
-public void expand( MetaNode parent) {
-	MetaNode mn_else = new MetaNode(parent);
-	MetaNode mn_then = new MetaNode(parent);
-	mn_then.WQNodes.add(this.then_block);
-	mn_else.WQNodes.add(this.else_block);
-	parent.WQNodes.remove(0);
-	parent.changed=true;
-	parent.NQMetaNodes.add(mn_then);
-	parent.NQMetaNodes.add(mn_else);
-
-	}
+PROJET VV HCC/NPE
+Planchais Christophe, Benkebir Chakib et Youssouf Roudani
+2017/2018
 
 
 
 
+CE QUE NOTRE PROGRAMME FAIT :
+→il imprime clairement des données sur l’AST sous la forme suivante « @@ » ; grâce à une lecture du code source des classes et interfaces.
+ j=10;@@ CtAssignmentImpl CtVariableWriteImpl-j CtLiteralImpl-10
+→ il construit efficacement toutes les classes nécessaires (production automatique de code java par). Ainsi, le wrapping des classes est efficace : il suffit de surcharger les constructeurs des classes X_CtImpl.java pour que le code réagisse à un événement particulier. 
+→ il construit des filtres (c.f. Filter2.java) qui permet également au code de réagir  à un événement particulier  
+→ Il construit des méta nœuds nécessaires au traitement des scopes de variables.
 
+CE QU’IL POURRAIT FAIRE : 
+→faire en sorte que les meta nœuds (flot de contrôle) soient créés lors d’appel de fonctions ou de constructeurs.
+→ainsi notre programme serait prêt à détecter les NPE de façon rigoureuse
 
-
-
-
-
-
- 	On lance le M_Linearizer et  "expand_x" avec comme paramètre un meta noeud dont la WaitingQueue est composée de la méthode static main du programme. 
-
-
-	A la construction d'un meta noeud, on ajoute à la WQ deux instructions vides (this.WQNodes.add( new X_NONE())) au début et à la fin pour créer des butoirs (sera ignoré lors du calcul de la HCC).
-
-
-4-)PHASE FINALE:
-	Expansion des meta-nœuds « MetaNode.java » représentant un changement de scope de variable (une branche de IF, un corps de While ou un appel de fonction). Un nouveau méta-noeud n’implique pas forcément une augmentation de la complexité cylcomatique. 
-
----------------------------en cours -----------___________________________________________
-Le problème du pointeur-null-exception NPE qui apparait lorsque l'on essaie de déréferencer une variable pointant sur le zéro-mémoire ne peut être résolu car  toute  propriété (telle que le programme plante-il?)  "sémantique  et non-triviale" est indécidable (Rice).
-exemple:
- main( int k){
-String str = "not null";
-for (int i=0;i=k;i++){if (k==50) str=null;}
-int i= str.length;
-
-4-)PHASE 4: RECHERCHE NPE
-	Nous appelons un « Scope » un bloc d’instructions linéaires qui propose la définition de variables locales. Il s’agit du nœud élémentaire du diagramme de flot de contrôle du programme. Chaque nœud Scope possède un pointeur vers une pile Lifo de variables. Le diagramme du programme est définitif lorsque aucun nœud ne peut-être expansé en de nouveaux Scope. Nous pouvons ainsi détecter les NPE (variables assignées à null ET utilisée). 
-	Pour l’informatisation des Scopes, nous proposons le nœud Node qui encapsule une instruction de type NODE (la super classe des X_CT-IMPL). Les objets Node possèdent chacuns une waiting_queue (une suite de Node qui ne peut former un scope plus grand) et qui est analysée grâce à un filtre « expand_switch ».  La waiting_queue WQ est remplie en une fois avec une suite d’instructions qui ne peut être plus grande sans former un autre Scope.
- 
-	Chaque  instruction possède un lien « begin_Scope » qui pointe vers le début du scope (qui contient l’index de la pile des variables nécessaire pour remettre à zéro le scope des variables après un bloc linéaire)  .   Pour gérer le cas de l’instruction « return »,( X_CTRETURNIMPL) au milieu d’un bloc d’instructions linéaires. On maintien un pointeur vers le début de la fonction. 
-
-
-
-
-4-)PHASE 4 :   ANALYSE NPE ET PARCOURS DU GRAPHE DES SCOPES
-	Parcours du graphe : 
-Un Node est marqué « visited » lorsque tous les successeurs ont été visités. On maintient une liste de Node qui enregistre le parcours (ouverture des noeuds). 
-	On recherche une variable an parcourant la pile de variables, on prend la première trouvée. Si une variable est utilisée avant d’avoir été affectée par une valeur non-null, une erreur ERROR est imprimée. Un warning WARNING est imprimé pour tout variable mise à null et pour tout pointeur vers zéro créé. 
-
+ DEMARRAGE
+→ Classe  PackageAnalysis.java
+	public static void main(String[] args) {
+		PackageAnalysis a = new PackageAnalysis(
+				"/home/kristof/NPE/");
+→ Le path doit correspondre à un dossier.
+→ Les classes et interfaces des sous-répertoires doivent être correctement « packagées ». C’est à dire que la classe du chemin « NPE/NPEPACK/NPEPACK2/Tri.java »
+doit obligatoirement déclarer son package : « package NPE.NPEPACK.NPEPACK2; »
